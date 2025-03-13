@@ -1,0 +1,31 @@
+
+from python_sync import EventBus
+
+EVENTS = 5000
+SUBSCRIBERS = 300
+MAX_WORKERS = 2
+
+def cpu_bound_task(data):
+    sum(i * i for i in range(1000))  # Fake CPU work
+
+# Sync Benchmark
+def benchmark_sync(event_bus, events=EVENTS, subscribers=SUBSCRIBERS):
+    event_name = "test_event"
+    
+    for _ in range(subscribers):
+        event_bus.subscribe(event_name, cpu_bound_task)
+
+    start_time = time.time()
+    
+    for _ in range(events):
+        event_bus.emit(event_name, {"test": "data"})
+
+    elapsed = time.time() - start_time
+    print(f"Sync EventBus: {events} events in {elapsed:.4f} sec ({events/elapsed:.2f} events/sec)")
+
+
+# Run all benchmarks
+if __name__ == "__main__":
+    print("\n[1] Testing Sync EventBus")
+    sync_bus = EventBus()
+    benchmark_sync(sync_bus)
