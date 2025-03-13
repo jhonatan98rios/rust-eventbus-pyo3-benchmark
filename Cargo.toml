@@ -1,0 +1,15 @@
+[package]
+name = "event_bus_rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pyo3 = { version = "0.20", features = ["extension-module"] }
+tokio = { version = "1", features = ["full"] }
+
+[lib]
+name = "event_bus_rs"
+crate-type = ["cdylib"]  # Required for Python bindings
+
+[profile.release]
+opt-level = 3
