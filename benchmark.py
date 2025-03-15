@@ -53,7 +53,7 @@ def rust_event_bus_benchmark(event_bus: RustEventBus, events=EVENTS, subscribers
     start_time = time.perf_counter()
 
     for _ in range(events):
-        event_bus.publish("test_event", ["data"])
+        event_bus.publish("test_event", {"msg": "Hello, World!"})
 
     end_time = time.perf_counter()
     duration = end_time - start_time

@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use pyo3::types::PyTuple;
+use pyo3::types::{PyDict};
 use tokio::sync::{mpsc, RwLock};
 use tokio::runtime::Runtime;
 use std::collections::HashMap;
@@ -13,7 +13,7 @@ struct EventBus {
     /// A map of event names to lists of callback functions
     subscribers: Arc<RwLock<HashMap<String, Vec<PyObject>>>>,
     /// A sender for publishing events
-    sender: mpsc::Sender<(String, Vec<PyObject>)>,
+    sender: mpsc::Sender<(String, PyObject)>,
     /// A Tokio runtime for managing asynchronous tasks
     runtime: Arc<Runtime>,
 }
@@ -27,7 +27,7 @@ impl EventBus {
     fn new(_py: Python) -> PyResult<Self> {
         
         let subscribers = Arc::new(RwLock::new(HashMap::new()));
-        let (sender, mut receiver) = mpsc::channel(1024);
+        let (sender, mut receiver): (mpsc::Sender<(String, PyObject)>, mpsc::Receiver<(String, PyObject)>) = mpsc::channel(1024);
 
         // Clone subscribers for async task
         let subs_clone = subscribers.clone();
@@ -48,7 +48,7 @@ impl EventBus {
                     Python::with_gil(|py| {
                         for callback in callbacks {
                             let callback: &PyAny = callback.as_ref(py);
-                            let _ = callback.call1(PyTuple::new(py, &args));
+                            let _ = callback.call1((args.clone(),));
                         }
                     });
                 }
@@ -88,14 +88,16 @@ impl EventBus {
     ///
     /// * `event` - The name of the event to publish
     /// * `args` - The list of arguments to pass to the callbacks
-    fn publish(&self, event: String, args: Vec<PyObject>) -> PyResult<()> {
+    fn publish(&self, py: Python, event: String, args: &PyDict) -> PyResult<()> {
         // Clone the sender to use it in the async task
         let sender = self.sender.clone();
         // Clone the runtime handle to use it in the async task
         let runtime_handle = self.runtime.handle().clone();
+        // Converte PyDict para PyObject
+        let args_obj: PyObject = args.into_py(py);
         // Spawn an async task to send the event and arguments to the receiver
         runtime_handle.spawn(async move {
-            let _ = sender.send((event, args)).await;
+            let _ = sender.send((event, args_obj)).await;
         });
         Ok(())
     }
